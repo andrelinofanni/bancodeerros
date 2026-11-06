@@ -1,0 +1,30 @@
+PACE — BANCO DE ERROS DO SEQUOR
+
+ARQUIVOS
+- index.html: aplicação web
+- config.js: URL e chave pública do Supabase (preencher antes de publicar)
+- supabase-schema.sql: tabelas, políticas de segurança e bucket de anexos
+
+ORDEM DE CONFIGURAÇÃO
+1. No Supabase, crie um projeto.
+2. Abra SQL Editor, cole o conteúdo de supabase-schema.sql e execute.
+3. Em Authentication > Providers > Email, mantenha Email habilitado.
+4. Em Authentication > Users, crie/invite o usuário que será usado no PACE (ou habilite cadastro temporariamente e depois desabilite novos cadastros).
+5. Em Project Settings > API, copie Project URL e anon/public key.
+6. Cole os dois valores em config.js. Nunca use a chave service_role no navegador ou no GitHub.
+7. Envie index.html, config.js e supabase-schema.sql para a raiz do repositório GitHub.
+8. No repositório, vá a Settings > Pages > Build and deployment > Deploy from a branch; escolha main e /(root), salve.
+9. Em Supabase > Authentication > URL Configuration, adicione o endereço do GitHub Pages em Site URL e Redirect URLs.
+10. Abra o endereço publicado e entre com o e-mail e senha cadastrados.
+
+SEGURANÇA
+- O banco usa Row Level Security e cada usuário só acessa os próprios registros.
+- O bucket de imagens é privado; as imagens são exibidas por links temporários.
+- A chave anon/public pode ficar no front-end porque as políticas RLS protegem os dados. A service_role NUNCA pode ser publicada.
+- Não publique dados reais antes de validar as políticas e o acesso.
+
+MIGRAÇÃO
+A versão anterior salvava registros no localStorage. Exporte o backup JSON antigo e use Importar backup no novo PACE. Os textos e status são importados. Imagens antigas em base64 precisam ser anexadas novamente manualmente.
+
+OBSERVAÇÃO
+Este pacote é uma primeira versão de integração com Supabase. A análise de diagnóstico continua baseada em palavras-chave; não é uma IA e não interpreta automaticamente o conteúdo das imagens.
