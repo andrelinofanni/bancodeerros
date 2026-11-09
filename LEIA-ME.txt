@@ -1,30 +1,66 @@
 PACE — BANCO DE ERROS DO SEQUOR
 
 ARQUIVOS
-- index.html: aplicação web
-- config.js: URL e chave pública do Supabase (preencher antes de publicar)
-- supabase-schema.sql: tabelas, políticas de segurança e bucket de anexos
+- index.html: aplicação web (inclui Ver, Editar, Excluir e botão Planilha de dados)
+- config.js: URL/chave pública do Supabase e ativação da integração com Google Sheets
+- supabase-schema.sql: tabelas, políticas de segurança e bucket privado de anexos
+- supabase/functions/sync-google-sheet/index.ts: função segura de sincronização PACE -> Google Sheets
+- supabase/config.toml: mantém a validação JWT da função ativa
 
-ORDEM DE CONFIGURAÇÃO
+FUNCIONAMENTO DA PLANILHA
+- O PACE continua sendo a fonte oficial dos dados.
+- Ao cadastrar, editar ou excluir um erro, o PACE solicita uma sincronização completa da aba inicial da planilha.
+- A aba é reconstruída a partir dos registros que o usuário autenticado pode consultar no Supabase. Isso evita duplicações e faz exclusões refletirem na planilha.
+- Alterações feitas manualmente no Google Sheets não são importadas para o PACE. Na próxima sincronização, a planilha volta a refletir o PACE.
+- A coluna H (ID interno) é usada para identificação e fica oculta.
+- A coluna Print ou foto informa se existe anexo no PACE. O arquivo continua privado no Storage e deve ser visualizado no próprio PACE.
+
+CONFIGURAÇÃO ORIGINAL DO SUPABASE (caso ainda não tenha sido concluída)
 1. No Supabase, crie um projeto.
 2. Abra SQL Editor, cole o conteúdo de supabase-schema.sql e execute.
 3. Em Authentication > Providers > Email, mantenha Email habilitado.
-4. Em Authentication > Users, crie/invite o usuário que será usado no PACE (ou habilite cadastro temporariamente e depois desabilite novos cadastros).
-5. Em Project Settings > API, copie Project URL e anon/public key.
-6. Cole os dois valores em config.js. Nunca use a chave service_role no navegador ou no GitHub.
-7. Envie index.html, config.js e supabase-schema.sql para a raiz do repositório GitHub.
-8. No repositório, vá a Settings > Pages > Build and deployment > Deploy from a branch; escolha main e /(root), salve.
-9. Em Supabase > Authentication > URL Configuration, adicione o endereço do GitHub Pages em Site URL e Redirect URLs.
-10. Abra o endereço publicado e entre com o e-mail e senha cadastrados.
+4. Em Authentication > Users, crie o usuário do PACE.
+5. Em Project Settings > API, copie Project URL e anon/public key para config.js.
+6. Nunca use a chave service_role no navegador ou no GitHub.
+
+CONFIGURAR A CONTA DO GOOGLE (uma única vez)
+1. Acesse https://console.cloud.google.com/ usando a conta Google proprietária da planilha.
+2. Crie um projeto no Google Cloud (ou selecione um projeto existente).
+3. Em APIs e serviços > Biblioteca, habilite Google Sheets API.
+4. Em IAM e administrador > Contas de serviço, crie uma conta de serviço.
+5. Abra a conta criada e gere uma chave no formato JSON. Guarde o arquivo com cuidado; ele contém uma chave privada.
+6. Abra o JSON e localize client_email e private_key.
+7. Compartilhe a planilha PACE com o endereço client_email, dando permissão de Editor.
+
+IMPLANTAR A FUNÇÃO SEGURA NO SUPABASE
+A função deve ficar no Supabase, não no GitHub Pages. A chave privada do Google nunca deve ser incluída no repositório.
+
+1. Instale o Supabase CLI seguindo https://supabase.com/docs/guides/cli.
+2. Abra o terminal na pasta do projeto PACE.
+3. Faça login no CLI: supabase login
+4. Vincule a pasta ao projeto: supabase link --project-ref SEU_PROJECT_REF
+   (o Project Ref aparece na URL/painel do projeto Supabase).
+5. Cadastre os secrets. Substitua os valores pelos do JSON e pelo ID da planilha:
+   supabase secrets set GOOGLE_SERVICE_ACCOUNT_EMAIL="client_email do JSON" GOOGLE_PRIVATE_KEY="private_key do JSON" GOOGLE_SHEET_ID="1RzE5dFIyUbd7P5VMoZ1ZSB-OF8uWZIibm0VTIwIrKuA"
+   Se o terminal do Windows não aceitar as aspas/linhas da chave privada, use o painel Supabase > Edge Functions > Secrets para cadastrar cada variável separadamente.
+6. Implante a função:
+   supabase functions deploy sync-google-sheet
+7. Não desative a verificação JWT da função. Ela deve exigir a sessão autenticada do PACE.
+
+PUBLICAR A VERSÃO ATUALIZADA
+1. Envie index.html, config.js, supabase-schema.sql, LEIA-ME.txt e a pasta supabase para a raiz do repositório GitHub.
+2. Em config.js, mantenha SUPABASE_URL e SUPABASE_ANON_KEY preenchidos com os valores públicos do seu projeto.
+3. Depois de implantar a função e cadastrar os secrets, altere GOOGLE_SHEETS_ENABLED para true.
+4. Publique pelo GitHub Pages e teste cadastrar, editar e excluir um registro.
 
 SEGURANÇA
-- O banco usa Row Level Security e cada usuário só acessa os próprios registros.
-- O bucket de imagens é privado; as imagens são exibidas por links temporários.
-- A chave anon/public pode ficar no front-end porque as políticas RLS protegem os dados. A service_role NUNCA pode ser publicada.
-- Não publique dados reais antes de validar as políticas e o acesso.
+- A planilha deve ser compartilhada com a conta de serviço do Google, não com uma chave pública.
+- GOOGLE_PRIVATE_KEY fica somente nos secrets do Supabase.
+- Nunca publique GOOGLE_PRIVATE_KEY, service_role ou o JSON da conta de serviço no GitHub.
+- O endpoint exige JWT de usuário autenticado e lê os registros respeitando as políticas RLS.
+- O bucket de imagens permanece privado. A planilha não recebe links públicos de anexos.
 
-MIGRAÇÃO
-A versão anterior salvava registros no localStorage. Exporte o backup JSON antigo e use Importar backup no novo PACE. Os textos e status são importados. Imagens antigas em base64 precisam ser anexadas novamente manualmente.
-
-OBSERVAÇÃO
-Este pacote é uma primeira versão de integração com Supabase. A análise de diagnóstico continua baseada em palavras-chave; não é uma IA e não interpreta automaticamente o conteúdo das imagens.
+OBSERVAÇÕES
+- A integração ainda precisa ser configurada e implantada; o botão da planilha abre o endereço informado, mas a sincronização só começa depois dessas etapas.
+- O primeiro acesso com a integração ativada também atualiza a planilha com os registros que já existem no PACE.
+- Faça backups JSON do PACE regularmente. A sincronização com a planilha não substitui o backup dos anexos.
