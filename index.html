@@ -116,7 +116,69 @@ async function render(){let q=$('search').value.toLowerCase(),f=$('filter').valu
 const cards=await Promise.all(list.map(async x=>{let cls=x.status==='Solucionado'?'done':x.status==='Pendente'?'pending':'invest',img=await signedImage(x.image_path);return `<article class="record"><div class="recordhead"><div><h3>${escapeHtml(x.title)}</h3><div class="meta">Sequor · Atualizado em ${new Date(x.updated_at).toLocaleDateString('pt-BR')}</div></div><span class="pill ${cls}">${escapeHtml(x.status)}</span></div><p>${escapeHtml(x.description)}</p>${img?`<img class="thumb" src="${img}" alt="Imagem anexada">`:''}<div class="recorddetails"><div class="detail"><b>Possível causa / causa raiz</b>${escapeHtml(x.cause||'Ainda não preenchida')}</div><div class="detail"><b>Como resolver</b>${escapeHtml(x.resolution||'Ainda não preenchida')}</div></div>${x.notes?`<div class="detail" style="margin-top:9px"><b>Observações</b>${escapeHtml(x.notes)}</div>`:''}<div class="actions"><button class="small" data-view="${x.id}">Ver</button><button class="small secondary" data-edit="${x.id}">Editar</button><button class="small danger" data-remove="${x.id}">Excluir</button></div></article>`}));$('records').innerHTML=cards.join('')||'<div class="empty">Nenhum erro encontrado.<br><span class="hint">Cadastre um erro ou ajuste a pesquisa.</span></div>';}
 $('records').addEventListener('click',e=>{let v=e.target.closest('[data-view]'),a=e.target.closest('[data-edit]'),b=e.target.closest('[data-remove]');if(v)viewRecord(v.dataset.view);if(a)edit(a.dataset.edit);if(b)remove(b.dataset.remove)});$('search').addEventListener('input',render);$('filter').addEventListener('change',render);
 $('exportBtn').onclick=()=>{let blob=new Blob([JSON.stringify(records,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='backup-banco-de-erros-pace.json';a.click();URL.revokeObjectURL(a.href);};
-$('importFile').onchange=e=>{let f=e.target.files[0];if(!f)return;let r=new FileReader();r.onload=async()=>{try{let data=JSON.parse(r.result);if(!Array.isArray(data))throw Error('Formato inválido');if(!confirm('Importar '+data.length+' registros? Os registros serão adicionados à sua conta.'))return;for(const x of data){let payload={user_id:currentUser.id,title:x.title||'Erro importado',description:x.description||'',cause:x.cause||'',resolution:x.resolution||'',status:['Em investigação','Pendente','Solucionado'].includes(x.status)?x.status:'Em investigação',notes:x.notes||'',created_at:x.created||new Date().toISOString(),updated_at:new Date().toISOString()};const {error}=await supabase.from('erros_pace').insert(payload);if(error)throw error;}await loadRecords();const sync=await syncGoogleSheet();alert('Importação concluída. Imagens antigas em base64 não são migradas automaticamente; anexe-as novamente quando necessário.'+(sync.error?'\n\nAtenção: a planilha não foi atualizada: '+sync.error:''));}catch(err){alert('Não foi possível importar: '+err.message)}finally{e.target.value=''}};r.readAsText(f);};
+$('importFile').onchange = e => {
+  const f = e.target.files[0];
+  if (!f) return;
+
+  const r = new FileReader();
+
+  r.onload = async () => {
+    try {
+      const data = JSON.parse(r.result);
+
+      if (!Array.isArray(data)) {
+        throw Error('Formato inválido');
+      }
+
+      if (!confirm(
+        'Importar ' + data.length +
+        ' registros? Os registros serão adicionados à sua conta.'
+      )) return;
+
+      for (const x of data) {
+        const payload = {
+          user_id: currentUser.id,
+          title: x.title || 'Erro importado',
+          description: x.description || '',
+          cause: x.cause || '',
+          resolution: x.resolution || '',
+          status: ['Em investigação', 'Pendente', 'Solucionado'].includes(x.status)
+            ? x.status
+            : 'Em investigação',
+          notes: x.notes || '',
+          image_path: x.image_path || null,
+          created_at: x.created_at || x.created || new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+
+        const { error } = await supabase
+          .from('erros_pace')
+          .insert(payload);
+
+        if (error) throw error;
+      }
+
+      await loadRecords();
+
+      const sync = await syncGoogleSheet();
+
+      alert(
+        'Importação concluída.\n' +
+        'Imagens antigas em base64 não são migradas automaticamente; anexe-as novamente quando necessário.' +
+        (sync.error
+          ? '\n\nAtenção: a planilha não foi atualizada: ' + sync.error
+          : '')
+      );
+
+    } catch (err) {
+      alert('Não foi possível importar: ' + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  r.readAsText(f);
+};
 async function showApp(user){currentUser=user;$('loginPanel').querySelector('h2').textContent='PACE conectado';$('loginPanel').querySelector('p').textContent=user.email;$('loginBtn').hidden=true;$('logoutBtn').hidden=false;$('appMain').hidden=false;try{await loadRecords();const sync=await syncGoogleSheet();if(sync.error)console.warn('Falha ao sincronizar Google Sheets:',sync.error)}catch(e){alert('Erro ao carregar os registros: '+e.message)}}
 $('loginBtn').onclick=async()=>{if(!supabase)return msg('Configure a URL e a chave pública no arquivo config.js antes de entrar.');let email=$('loginEmail').value.trim(),password=$('loginPassword').value;if(!email||!password)return msg('Informe e-mail e senha.');msg('Conectando...');const {data,error}=await supabase.auth.signInWithPassword({email,password});if(error)return msg('Não foi possível entrar: '+error.message);msg('');await showApp(data.user);};
 $('logoutBtn').onclick=async()=>{await supabase.auth.signOut();currentUser=null;records=[];$('appMain').hidden=true;$('loginBtn').hidden=false;$('logoutBtn').hidden=true;$('loginPanel').querySelector('h2').textContent='Acesso ao PACE';$('loginPanel').querySelector('p').textContent='Entre com seu e-mail e senha cadastrados no Supabase.';msg('Você saiu da sua conta.');};
