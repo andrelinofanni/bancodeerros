@@ -125,15 +125,9 @@ $('importFile').onchange = e => {
   r.onload = async () => {
     try {
       const data = JSON.parse(r.result);
+      if (!Array.isArray(data)) throw Error('Formato inválido');
 
-      if (!Array.isArray(data)) {
-        throw Error('Formato inválido');
-      }
-
-      if (!confirm(
-        'Importar ' + data.length +
-        ' registros? Os registros serão adicionados à sua conta.'
-      )) return;
+      if (!confirm('Importar ' + data.length + ' registros? Os registros serão adicionados à sua conta.')) return;
 
       for (const x of data) {
         const payload = {
@@ -143,31 +137,23 @@ $('importFile').onchange = e => {
           cause: x.cause || '',
           resolution: x.resolution || '',
           status: ['Em investigação', 'Pendente', 'Solucionado'].includes(x.status)
-            ? x.status
-            : 'Em investigação',
+            ? x.status : 'Em investigação',
           notes: x.notes || '',
-          image_path: x.image_path || null,
-          created_at: x.created_at || x.created || new Date().toISOString(),
+          created_at: x.created || new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
 
-        const { error } = await supabase
-          .from('erros_pace')
-          .insert(payload);
-
+        const { error } = await supabase.from('erros_pace').insert(payload);
         if (error) throw error;
       }
 
       await loadRecords();
-
       const sync = await syncGoogleSheet();
 
       alert(
         'Importação concluída.\n' +
         'Imagens antigas em base64 não são migradas automaticamente; anexe-as novamente quando necessário.' +
-        (sync.error
-          ? '\n\nAtenção: a planilha não foi atualizada: ' + sync.error
-          : '')
+        (sync.error ? '\n\nAtenção: a planilha não foi atualizada: ' + sync.error : '')
       );
 
     } catch (err) {
