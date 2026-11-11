@@ -6,5 +6,5 @@ window.PACE_CONFIG = {
   SUPABASE_ANON_KEY: 'sb_publishable_nFrJ1ulXQ5sBHGlwUTpHkw_vSXntt6m',
   // Mude para true somente depois de implantar a função sync-google-sheet e cadastrar
   // os secrets do Google no Supabase.
-  GOOGLE_SHEETS_ENABLED: false
+  GOOGLE_SHEETS_ENABLED: true
 };
