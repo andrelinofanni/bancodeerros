@@ -330,7 +330,12 @@ function renderChecklist(){
 $('daysGrid').addEventListener('submit',async e=>{
  const form=e.target.closest('[data-day-form]');if(!form)return;e.preventDefault();
  const title=form.elements.taskTitle.value.trim();if(!title)return;
- const date=form.dataset.day;
+ const date=form.dataset.dayForm;
+
+if(!date){
+    alert('Não foi possível identificar a data deste dia. Atualize a página e tente novamente.');
+    return;
+}
  const payload={user_id:currentUser.id,week_start:selectedWeekStart,task_date:date,title,description:form.elements.taskDescription.value.trim(),priority:form.elements.taskPriority.value,status:'Pendente'};
  const {error}=await supabaseClient.from('pace_checklist_tasks').insert(payload);
  if(error)return alert('Não foi possível adicionar a tarefa: '+error.message);
