@@ -25,6 +25,8 @@ footer{font-size:12px;color:var(--muted);margin-top:15px}.account-status{margin-
 .nav-tabs{display:flex;gap:9px;flex-wrap:wrap;margin:0 0 18px}
 .nav-tabs button.active{background:#111;color:#fff}
 #checklistSection{display:grid;gap:16px}
+/* Mantém as áreas realmente ocultas quando a outra aba está selecionada. */
+#checklistSection[hidden],#errorsSection[hidden]{display:none!important}
 .week-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:space-between}
 .week-toolbar .week-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .week-toolbar input{width:auto;min-width:155px}
@@ -109,7 +111,7 @@ footer{font-size:12px;color:var(--muted);margin-top:15px}.account-status{margin-
 <h2>Consultar banco de erros</h2>
 <div class="toolbar"><input id="search" placeholder="Pesquisar por erro, causa, solução ou palavra-chave..."><select id="filter"><option value="">Todos os status</option><option>Em investigação</option><option>Pendente</option><option>Solucionado</option></select></div>
 <div id="records" class="records"></div>
-<footer>Privacidade: acesso protegido por conta. Os registros e anexos são isolados por usuário no banco de dados. Faça backups regularmente.</footer>
+<footer>Privacidade: acesso protegido por conta. Os erros e anexos são compartilhados entre usuários; cada usuário mantém seu próprio checklist e relatórios. Apenas o autor pode editar ou excluir seus registros. Faça backups regularmente.</footer>
 </section>
 </div>
 </section>
